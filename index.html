@@ -176,13 +176,14 @@ input::placeholder{color:var(--ink-faint);}
         Import file
         <input type="file" id="importFile" accept=".xlsx" style="position:absolute;inset:0;opacity:0;cursor:pointer;font-size:100px;">
       </label>
-      <button class="iconbtn primary" id="exportBtn">Export to Excel</button>
+      <button class="iconbtn primary" id="saveMonthBtn">Save this month</button>
+      <button class="iconbtn" id="exportBtn">Export to Excel</button>
       <button class="iconbtn" id="resetBtn">Clear all</button>
     </div>
   </div>
 
   <div class="sync-banner">
-    <b>How this stays in sync:</b> click <b>Import file</b> and pick your saved Excel — in Chrome or Edge, that file then stays linked, so every <b>Export to Excel</b> after that writes straight back into the same file (no new downloads, no picking a location twice). Safari and Firefox don't support this, so those browsers will download a fresh copy each time — just replace the old one in Drive manually. Nothing autosaves to the cloud from here; the Excel file is your save point.
+    <b>How this works:</b> everything you type auto-saves to this browser automatically — no action needed. Click <b>Save this month</b> anytime to lock a snapshot of this month into History (you can do this multiple times as you update numbers). Click <b>Export to Excel</b> only when you want a Drive backup or to move data to another device.
   </div>
 
   <div class="stamp-row">
@@ -339,7 +340,7 @@ input::placeholder{color:var(--ink-faint);}
     <div class="desc">One row per month. Export twice in the same month and you'll be asked whether to overwrite that month's entry or keep both as separate rows.</div>
     <div id="historyChartWrap"></div>
     <div id="historyDetailWrap"></div>
-    <div id="historyTableWrap"><div class="histempty">No months saved yet. Fill in your numbers and click Export to Excel.</div></div>
+    <div id="historyTableWrap"><div class="histempty">No months saved yet. Fill in your numbers and click Save this month.</div></div>
   </section>
 
   <div class="savebar"><span id="saveIndicator">Saved</span></div>
@@ -600,7 +601,7 @@ function renderHistory(){
   const el = document.getElementById('historyTableWrap');
   document.getElementById('historyDetailWrap').innerHTML = '';
   if(!state.history || !state.history.length){
-    el.innerHTML = '<div class="histempty">No months saved yet. Fill in your numbers and click Export to Excel.</div>';
+    el.innerHTML = '<div class="histempty">No months saved yet. Fill in your numbers and click Save this month.</div>';
     document.getElementById('historyChartWrap').innerHTML = '';
     return;
   }
@@ -1039,6 +1040,7 @@ document.getElementById('addBorrowed').addEventListener('click', ()=>{
   renderBorrowed(); recalc();
 });
 
+document.getElementById('saveMonthBtn').addEventListener('click', saveMonthSnapshot);
 document.getElementById('exportBtn').addEventListener('click', exportExcel);
 
 document.getElementById('importFile').addEventListener('change', e=>{
@@ -1281,43 +1283,46 @@ function buildWorkbook(){
   return wb;
 }
 
-async function exportExcel(){
+// ─── Save this month (snapshot only, no file download) ───────────────────────
+async function saveMonthSnapshot(){
   recalc();
-  const now=new Date();
-  const baseMonthKey=monthKeyFromDate(now);
-  const monthLabel=monthLabelFromDate(now);
-  let monthKey=baseMonthKey, label=monthLabel;
-  const exact=state.history.find(h=>h.monthKey===baseMonthKey);
+  const now = new Date();
+  const baseMonthKey = monthKeyFromDate(now);
+  const monthLabel = monthLabelFromDate(now);
+  let monthKey = baseMonthKey, label = monthLabel;
+
+  const exact = state.history.find(h=>h.monthKey===baseMonthKey);
   if(exact){
-    const choice=await showModal({
-      title:'You already have '+monthLabel+' saved',
-      body:'Last saved '+new Date(exact.savedAt).toLocaleString('en-IN',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+'. What should today\'s export do?',
+    const choice = await showModal({
+      title: 'You already saved ' + monthLabel,
+      body: 'Last saved ' + new Date(exact.savedAt).toLocaleString('en-IN',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) + '. What do you want to do?',
       buttons:[
-        {label:'Add as a new session',hint:'Keeps the old entry and adds a second row for '+monthLabel,style:'primary',value:'add'},
-        {label:'Overwrite the existing entry',hint:'Replaces saved numbers for this month with today\'s',value:'overwrite'},
-        {label:'Cancel',value:'cancel'}
+        {label:'Update this month\'s entry', hint:'Replaces the saved numbers with today\'s — good for mid-month updates', style:'primary', value:'overwrite'},
+        {label:'Add as a separate entry', hint:'Keeps the old entry and adds a new row — good for comparing two snapshots', value:'add'},
+        {label:'Cancel', value:'cancel'}
       ]
     });
-    if(choice==='cancel'||choice===null) return;
+    if(choice==='cancel'||choice===null) return false;
     if(choice==='add'){
-      const versions=state.history.filter(h=>h.monthKey===baseMonthKey||h.monthKey.startsWith(baseMonthKey+'-v'));
-      monthKey=baseMonthKey+'-v'+(versions.length+1);
-      label=monthLabel+' (session '+(versions.length+1)+', '+now.toLocaleDateString('en-IN',{day:'numeric',month:'short'})+')';
+      const versions = state.history.filter(h=>h.monthKey===baseMonthKey||h.monthKey.startsWith(baseMonthKey+'-v'));
+      monthKey = baseMonthKey+'-v'+(versions.length+1);
+      label = monthLabel+' ('+(versions.length+1)+', '+now.toLocaleDateString('en-IN',{day:'numeric',month:'short'})+')';
     }
   }
-  const entry={
-    monthKey,month:label,
-    salary:lastTotals.salary,available:lastTotals.liquid,due:lastTotals.due,
-    net:lastTotals.net,netWorth:lastTotals.netWorth,
-    loanEmi:lastTotals.loanEmi,loanOutstanding:lastTotals.loanOutstanding,
-    loanInterestThisMonth:lastTotals.loanInterestThisMonth,loanPrincipalThisMonth:lastTotals.loanPrincipalThisMonth,
+
+  const entry = {
+    monthKey, month: label,
+    salary:lastTotals.salary, available:lastTotals.liquid, due:lastTotals.due,
+    net:lastTotals.net, netWorth:lastTotals.netWorth,
+    loanEmi:lastTotals.loanEmi, loanOutstanding:lastTotals.loanOutstanding,
+    loanInterestThisMonth:lastTotals.loanInterestThisMonth, loanPrincipalThisMonth:lastTotals.loanPrincipalThisMonth,
     loanRemainingInterest:lastTotals.loanRemainingInterest,
-    cardsTotal:lastTotals.cardsTotal,cardsOthers:lastTotals.cardsOthers,cardsActual:lastTotals.cardsActual,
-    cardsDue:lastTotals.cardsDue,cardsDueMine:lastTotals.cardsDueMine,
-    cardEmiMonthly:lastTotals.cardEmiMonthly,cardEmiOutstanding:lastTotals.cardEmiOutstanding,
-    investMonthly:lastTotals.investMonthly,investValue:lastTotals.investValue,
-    recurring:lastTotals.recurring,otherExpenses:lastTotals.otherExpenses,
-    friendsOut:lastTotals.friendsOut,borrowedOut:lastTotals.borrowedOut,
+    cardsTotal:lastTotals.cardsTotal, cardsOthers:lastTotals.cardsOthers, cardsActual:lastTotals.cardsActual,
+    cardsDue:lastTotals.cardsDue, cardsDueMine:lastTotals.cardsDueMine,
+    cardEmiMonthly:lastTotals.cardEmiMonthly, cardEmiOutstanding:lastTotals.cardEmiOutstanding,
+    investMonthly:lastTotals.investMonthly, investValue:lastTotals.investValue,
+    recurring:lastTotals.recurring, otherExpenses:lastTotals.otherExpenses,
+    friendsOut:lastTotals.friendsOut, borrowedOut:lastTotals.borrowedOut,
     snapshot:{
       banks:JSON.parse(JSON.stringify(state.banks)),
       loans:JSON.parse(JSON.stringify(state.loans)),
@@ -1329,19 +1334,33 @@ async function exportExcel(){
       friends:JSON.parse(JSON.stringify(state.friends)),
       borrowed:JSON.parse(JSON.stringify(state.borrowed))
     },
-    savedAt:now.toISOString()
+    savedAt: now.toISOString()
   };
-  const existingIdx=state.history.findIndex(h=>h.monthKey===monthKey);
+
+  const existingIdx = state.history.findIndex(h=>h.monthKey===monthKey);
   if(existingIdx>=0) state.history[existingIdx]=entry;
   else state.history.push(entry);
   lsSave();
   renderHistory();
+
+  const ts = now.toLocaleString('en-IN',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+  document.getElementById('updatedNote').textContent = monthLabel + ' saved to history — ' + ts;
+  flashSaved('Saved');
+  return true;
+}
+
+// ─── Export to Excel (snapshot + file download) ───────────────────────────────
+async function exportExcel(){
+  const saved = await saveMonthSnapshot();
+  if(!saved) return; // user cancelled the conflict dialog
+
   const wb=buildWorkbook();
   const wbout=XLSX.write(wb,{bookType:'xlsx',type:'array'});
-  const ts=now.toLocaleString('en-IN',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+  const ts=new Date().toLocaleString('en-IN',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
   if(fileHandle){
     try{
       const w=await fileHandle.createWritable();
+
       await w.write(wbout); await w.close();
       document.getElementById('updatedNote').textContent='Saved to '+fileHandle.name+' — '+ts;
       updateSaveIndicator('file'); return;
