@@ -1,0 +1,1425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Monthly Forecast</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@500;600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+:root{
+  --bg:#EEF0EA;
+  --card:#FFFFFF;
+  --ink:#1B2A45;
+  --ink-soft:#5B6B85;
+  --ink-faint:#8C97AA;
+  --line:#DCDFD6;
+  --line-strong:#C3C8BC;
+  --green:#1F7A5C;
+  --green-bg:#E4F1EA;
+  --red:#A93226;
+  --red-bg:#F8E9E7;
+  --amber:#9A6B0F;
+  --amber-bg:#FBF0DC;
+  --blue:#2E5E8C;
+  --blue-bg:#E5EEF5;
+  --sans:'Inter',sans-serif;
+  --serif:'Source Serif 4',serif;
+  --mono:'IBM Plex Mono',monospace;
+}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--bg);font-family:var(--sans);color:var(--ink);padding:32px 16px 80px;}
+.wrap{max-width:760px;margin:0 auto;}
+
+.topbar{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:16px;padding-bottom:16px;border-bottom:1.5px solid var(--ink);flex-wrap:wrap;gap:12px;}
+.topbar h1{font-family:var(--serif);font-weight:600;font-size:26px;margin:0;letter-spacing:-0.01em;}
+.topbar .sub{font-size:12.5px;color:var(--ink-soft);margin-top:4px;}
+.topbar .actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.iconbtn{background:none;border:1px solid var(--line-strong);border-radius:6px;padding:6px 12px;font-family:var(--sans);font-size:12.5px;color:var(--ink-soft);cursor:pointer;}
+.iconbtn:hover{background:#fff;color:var(--ink);}
+.iconbtn.primary{background:var(--ink);color:#fff;border-color:var(--ink);}
+.iconbtn.primary:hover{opacity:0.85;background:var(--ink);color:#fff;}
+.filelabel{display:inline-block;}
+.filelabel input[type=file]{display:none;}
+
+.sync-banner{background:var(--blue-bg);border:1px solid var(--blue);border-radius:8px;padding:10px 14px;font-size:12.5px;color:var(--blue);margin-bottom:20px;line-height:1.5;}
+.sync-banner b{font-weight:500;}
+
+.stamp-row{display:flex;gap:12px;margin-bottom:28px;}
+.stamp{flex:1;background:var(--card);border-radius:10px;padding:16px 18px;border:1px solid var(--line);}
+.stamp .label{font-size:11.5px;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-faint);margin-bottom:6px;}
+.stamp .value{font-family:var(--mono);font-size:21px;font-weight:500;}
+.stamp.result{border:2px dashed var(--line-strong);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;position:relative;}
+.stamp.result .tag{font-family:var(--serif);font-size:13px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:4px;}
+.stamp.result .value{font-size:24px;}
+.stamp.result.surplus{border-color:var(--green);background:var(--green-bg);}
+.stamp.result.surplus .tag,.stamp.result.surplus .value{color:var(--green);}
+.stamp.result.deficit{border-color:var(--red);background:var(--red-bg);}
+.stamp.result.deficit .tag,.stamp.result.deficit .value{color:var(--red);}
+
+section{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px 20px;margin-bottom:16px;}
+section h2{font-family:var(--serif);font-size:16px;font-weight:600;margin:0 0 2px;}
+section .desc{font-size:12px;color:var(--ink-soft);margin:0 0 14px;}
+
+.row{display:grid;grid-template-columns:1fr;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);}
+.row:last-of-type{border-bottom:none;}
+.row.g2{grid-template-columns:1.3fr 1fr auto;}
+.row.g1{grid-template-columns:1.3fr 1fr auto;}
+
+input[type=text],input[type=number],input[type=date],select{
+  width:100%;padding:7px 9px;border:1px solid var(--line-strong);border-radius:6px;
+  font-family:var(--sans);font-size:13.5px;color:var(--ink);background:#FCFCFA;
+}
+input[type=number]{font-family:var(--mono);}
+input:focus,select:focus{outline:none;border-color:var(--ink-soft);background:#fff;}
+input::placeholder{color:var(--ink-faint);}
+
+.item-card{border:1px solid var(--line);border-radius:8px;padding:12px;margin-bottom:8px;position:relative;}
+
+.entry-grid{display:grid;column-gap:8px;row-gap:6px;align-items:center;}
+.entry-grid.cols-3{grid-template-columns:repeat(3,1fr) auto;}
+.entry-grid.cols-4{grid-template-columns:repeat(4,1fr) auto;}
+.entry-grid.cols-5{grid-template-columns:repeat(5,1fr) auto;}
+.entry-grid.cols-6{grid-template-columns:repeat(6,1fr) auto;}
+.entry-grid .ghead{font-size:10px;text-transform:uppercase;letter-spacing:0.04em;color:var(--ink-faint);padding-bottom:4px;border-bottom:1.5px solid var(--line-strong);}
+.entry-grid .grow-note{grid-column:1/-1;font-size:11px;color:var(--ink-faint);margin-top:-4px;margin-bottom:4px;padding-bottom:6px;border-bottom:1px solid var(--line);display:flex;gap:14px;flex-wrap:wrap;}
+.entry-grid .grow-note b{font-family:var(--mono);font-weight:500;color:var(--ink-soft);}
+.entry-grid .grow-note.amber b{color:var(--amber);}
+.entry-grid .toggle-pair{display:flex;border:1px solid var(--line-strong);border-radius:6px;overflow:hidden;font-size:11px;}
+.entry-grid .toggle-pair button{flex:1;padding:7px 4px;border:none;background:#FCFCFA;color:var(--ink-soft);cursor:pointer;}
+.entry-grid .toggle-pair button.active{background:var(--ink);color:#fff;}
+@media(max-width:640px){
+  .entry-grid.cols-4,.entry-grid.cols-5,.entry-grid.cols-6{grid-template-columns:repeat(auto-fit,minmax(100px,1fr));}
+  .entry-grid .ghead{display:none;}
+}
+.item-card .fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;padding-right:24px;}
+.item-card .field label{display:block;font-size:10px;text-transform:uppercase;letter-spacing:0.04em;color:var(--ink-faint);margin-bottom:3px;line-height:1.25;min-height:24px;}
+.item-card .field.computed .value{font-family:var(--mono);font-size:13.5px;font-weight:500;padding:7px 9px;background:var(--green-bg);border-radius:6px;color:var(--green);}
+.item-card .field.computed .value.amber{background:var(--amber-bg);color:var(--amber);}
+.item-card .rm{position:absolute;top:8px;right:6px;}
+
+.rm{background:none;border:none;color:var(--ink-faint);cursor:pointer;font-size:16px;padding:4px 6px;line-height:1;}
+.rm:hover{color:var(--red);}
+
+.addbtn{margin-top:10px;background:none;border:1px dashed var(--line-strong);border-radius:6px;padding:7px 12px;font-family:var(--sans);font-size:12.5px;color:var(--ink-soft);cursor:pointer;width:100%;text-align:left;}
+.addbtn:hover{border-color:var(--ink-soft);color:var(--ink);}
+
+.section-total{display:flex;justify-content:space-between;margin-top:12px;padding-top:10px;border-top:1px solid var(--line);font-size:13.5px;}
+.section-total .n{font-family:var(--mono);font-weight:500;}
+
+.salary-input{display:flex;align-items:center;gap:10px;}
+.salary-input span{font-family:var(--mono);font-size:15px;color:var(--ink-soft);}
+.salary-input input{font-size:17px;padding:9px 10px;}
+
+.breakdown{margin-top:14px;padding-top:12px;border-top:1px solid var(--line);font-size:12.5px;color:var(--ink-soft);}
+.breakdown div{display:flex;justify-content:space-between;padding:3px 0;}
+.breakdown .n{font-family:var(--mono);}
+
+.histtable{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:6px;}
+.histtable th{text-align:right;font-weight:500;color:var(--ink-faint);font-size:10.5px;text-transform:uppercase;letter-spacing:0.03em;padding:6px 8px;border-bottom:1px solid var(--line-strong);}
+.histtable th:first-child,.histtable td:first-child{text-align:left;}
+.histtable td{text-align:right;padding:7px 8px;border-bottom:1px solid var(--line);font-family:var(--mono);}
+.histtable td:first-child{font-family:var(--sans);}
+.histtable tr:last-child td{border-bottom:none;}
+.histempty{font-size:12.5px;color:var(--ink-faint);padding:10px 0;}
+
+.chartwrap{margin-bottom:16px;}
+.chartlegend{display:flex;gap:16px;margin-bottom:8px;font-size:11.5px;color:var(--ink-soft);}
+.chartlegend span{display:inline-flex;align-items:center;gap:5px;}
+.chartlegend i{width:9px;height:9px;border-radius:2px;display:inline-block;}
+.chart-tick{font-family:var(--mono);font-size:9.5px;fill:var(--ink-faint);}
+.chart-label{font-family:var(--sans);font-size:9.5px;fill:var(--ink-faint);}
+
+.histtable tbody tr{cursor:pointer;}
+.histtable tbody tr:hover{background:var(--bg);}
+.histdetail{border:1px solid var(--line-strong);border-radius:10px;padding:14px 16px;margin-bottom:14px;background:var(--bg);}
+.histdetail .histdetail-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+.histdetail .histdetail-head h3{font-family:var(--serif);font-size:15px;font-weight:600;margin:0;}
+.histdetail .backbtn{background:none;border:1px solid var(--line-strong);border-radius:6px;padding:5px 11px;font-size:12px;color:var(--ink-soft);cursor:pointer;}
+.histdetail .backbtn:hover{background:#fff;color:var(--ink);}
+
+.savebar{position:sticky;bottom:12px;text-align:center;margin-top:20px;}
+.savebar span{background:var(--ink);color:#fff;font-size:11.5px;padding:6px 14px;border-radius:20px;font-family:var(--sans);opacity:0;transition:opacity .3s;}
+.savebar span.show{opacity:0.88;}
+
+.modal-overlay{position:fixed;inset:0;background:rgba(27,42,69,0.45);display:flex;align-items:center;justify-content:center;z-index:1000;padding:16px;}
+.modal-box{background:#fff;border-radius:12px;padding:22px 24px;max-width:400px;width:100%;}
+.modal-box h3{font-family:var(--serif);font-size:17px;font-weight:600;margin:0 0 10px;}
+.modal-box p{font-size:13.5px;color:var(--ink-soft);line-height:1.6;margin:0 0 18px;}
+.modal-actions{display:flex;flex-direction:column;gap:8px;}
+.modal-btn{width:100%;padding:10px 14px;border-radius:8px;font-family:var(--sans);font-size:13.5px;cursor:pointer;border:1px solid var(--line-strong);background:#fff;color:var(--ink);text-align:left;}
+.modal-btn:hover{background:var(--bg);}
+.modal-btn.primary{background:var(--ink);color:#fff;border-color:var(--ink);}
+.modal-btn.primary:hover{opacity:0.88;background:var(--ink);}
+.modal-btn.danger{color:var(--red);border-color:var(--red);}
+.modal-btn.danger:hover{background:var(--red-bg);}
+.modal-btn small{display:block;font-size:11px;color:var(--ink-faint);font-weight:400;margin-top:2px;}
+.modal-btn.primary small{color:#cfd6e0;}
+
+@media(max-width:520px){
+  .row.g2{grid-template-columns:1fr auto;}
+  .item-card .fields{grid-template-columns:1fr 1fr;}
+  .stamp-row{flex-direction:column;}
+  .topbar{align-items:flex-start;}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <div>
+      <h1>Monthly forecast</h1>
+      <div class="sub" id="updatedNote">Nothing loaded yet — import a file or start entering data</div>
+    </div>
+    <div class="actions">
+      <button class="iconbtn" id="importBtn">Import file</button>
+      <input type="file" id="importFile" accept=".xlsx" style="display:none;">
+      <button class="iconbtn primary" id="exportBtn">Export to Excel</button>
+      <button class="iconbtn" id="resetBtn">Clear all</button>
+    </div>
+  </div>
+
+  <div class="sync-banner">
+    <b>How this stays in sync:</b> click <b>Import file</b> and pick your saved Excel — in Chrome or Edge, that file then stays linked, so every <b>Export to Excel</b> after that writes straight back into the same file (no new downloads, no picking a location twice). Safari and Firefox don't support this, so those browsers will download a fresh copy each time — just replace the old one in Drive manually. Nothing autosaves to the cloud from here; the Excel file is your save point.
+  </div>
+
+  <div class="stamp-row">
+    <div class="stamp">
+      <div class="label">Available now</div>
+      <div class="value" id="s-available">0</div>
+    </div>
+    <div class="stamp">
+      <div class="label">Due next month</div>
+      <div class="value" id="s-due">0</div>
+    </div>
+    <div class="stamp result" id="s-result">
+      <div class="tag" id="s-tag">Surplus</div>
+      <div class="value" id="s-value">0</div>
+    </div>
+  </div>
+
+  <section>
+    <h2>Salary</h2>
+    <div class="desc">Expected income for next month.</div>
+    <div class="salary-input">
+      <span>₹</span>
+      <input type="number" id="salaryInput" placeholder="0" min="0">
+    </div>
+  </section>
+
+  <section>
+    <h2>Bank balance and cash</h2>
+    <div class="desc">What you can draw on right now.</div>
+    <div id="banksList"></div>
+    <button class="addbtn" id="addBank">+ Add bank account</button>
+    <div class="row g1" style="margin-top:12px;border-top:1px solid var(--line);padding-top:12px;">
+      <label style="font-size:13.5px;color:var(--ink-soft);">Cash in hand</label>
+      <input type="number" id="cashInput" placeholder="0" min="0">
+      <span></span>
+    </div>
+    <div class="section-total"><span>Total available</span><span class="n" id="t-liquid">₹0</span></div>
+    <div class="section-total"><span>Actually yours (excluding borrowed)</span><span class="n" id="t-liquid-mine">₹0</span></div>
+  </section>
+
+  <section>
+    <h2>Loans</h2>
+    <div class="desc">Long-term loans — home, personal, vehicle. Not linked to a card. Add an interest rate and loan-end date to see the principal/interest split.</div>
+    <div id="loansList"></div>
+    <button class="addbtn" id="addLoan">+ Add loan</button>
+    <div class="section-total"><span>Total EMI due next month</span><span class="n" id="t-loanemi">₹0</span></div>
+    <div class="section-total"><span>Total outstanding across loans</span><span class="n" id="t-loanoutstanding">₹0</span></div>
+  </section>
+
+  <section>
+    <h2>Credit cards</h2>
+    <div class="desc">Current outstanding on each card — update these once statements generate. Add what you spent on behalf of others so your actual spend is separated out. If part of the outstanding is an active EMI, only that EMI's monthly installment counts toward what's due this cycle, not the full remaining EMI balance.</div>
+    <div id="cardsList"></div>
+    <button class="addbtn" id="addCard">+ Add card</button>
+    <div class="section-total"><span>Total card outstanding (full)</span><span class="n" id="t-cards">₹0</span></div>
+    <div class="section-total"><span>Spent for others</span><span class="n" id="t-cards-others">₹0</span></div>
+    <div class="section-total"><span>My actual spend</span><span class="n" id="t-cards-actual">₹0</span></div>
+    <div class="section-total" style="font-weight:500;"><span>Due this month (EMI-adjusted)</span><span class="n" id="t-cards-due">₹0</span></div>
+  </section>
+
+  <section>
+    <h2>Active EMIs on credit cards</h2>
+    <div class="desc">EMIs converted from a card purchase. Link each one to its card so the amount matches against that card's outstanding — this EMI is already part of the card's bill, so only the monthly installment counts as due, not the full remaining EMI balance.</div>
+    <div id="cardEmisList"></div>
+    <button class="addbtn" id="addCardEmi">+ Add card EMI</button>
+    <div class="section-total"><span>Total monthly EMI on cards</span><span class="n" id="t-cardemi-monthly">₹0</span></div>
+    <div class="section-total"><span>Total remaining EMI principal</span><span class="n" id="t-cardemi-outstanding">₹0</span></div>
+  </section>
+
+  <section>
+    <h2>Investments</h2>
+    <div class="desc">SIPs, ESPP, shares — what you put in monthly, and what it's worth today.</div>
+    <div id="investmentsList"></div>
+    <button class="addbtn" id="addInvestment">+ Add investment</button>
+    <div class="section-total"><span>Total monthly investment</span><span class="n" id="t-invmonthly">₹0</span></div>
+    <div class="section-total"><span>Total current value</span><span class="n" id="t-invvalue">₹0</span></div>
+  </section>
+
+  <section>
+    <h2>Money lent to friends</h2>
+    <div class="desc">Interest-free money you've given out — so you know how much of "your" money is actually still outside.</div>
+    <div id="friendsList"></div>
+    <button class="addbtn" id="addFriend">+ Add entry</button>
+    <div class="section-total"><span>Total still outstanding</span><span class="n" id="t-friends">₹0</span></div>
+  </section>
+
+  <section>
+    <h2>Money borrowed from friends</h2>
+    <div class="desc">Money friends have given you that's sitting in your bank account — so your balance doesn't quietly count it as your own.</div>
+    <div id="borrowedList"></div>
+    <button class="addbtn" id="addBorrowed">+ Add entry</button>
+    <div class="section-total"><span>Total still owed to friends</span><span class="n" id="t-borrowed">₹0</span></div>
+  </section>
+
+  <section>
+    <h2>Recurring expenses</h2>
+    <div class="desc">Rent, insurance, subscriptions — anything fixed every month.</div>
+    <div id="expensesList"></div>
+    <button class="addbtn" id="addExpense">+ Add expense</button>
+    <div class="section-total"><span>Total recurring</span><span class="n" id="t-expenses">₹0</span></div>
+  </section>
+
+  <section>
+    <h2>Other expenses</h2>
+    <div class="desc">Food, electricity — variable spends that aren't fixed but still happen most months.</div>
+    <div id="otherExpensesList"></div>
+    <button class="addbtn" id="addOtherExpense">+ Add expense</button>
+    <div class="section-total"><span>Total other expenses</span><span class="n" id="t-otherexp">₹0</span></div>
+  </section>
+
+  <section>
+    <h2>Net worth snapshot</h2>
+    <div class="desc">Everything you own minus everything you owe, right now.</div>
+    <div class="breakdown">
+      <div><span>Bank + cash</span><span class="n" id="nw-liquid">0</span></div>
+      <div><span>Investments (current value)</span><span class="n" id="nw-invest">0</span></div>
+      <div><span>Lent to friends (owed to you)</span><span class="n" id="nw-friends">0</span></div>
+      <div><span>Spent for others on cards (owed to you)</span><span class="n" id="nw-cardsothers">0</span></div>
+      <div style="border-top:1px solid var(--line);margin-top:6px;padding-top:8px;"><span>Total assets</span><span class="n" id="nw-assets">0</span></div>
+      <div style="margin-top:8px;"><span>Loans outstanding</span><span class="n" id="nw-loans">0</span></div>
+      <div><span>Active EMI principal remaining</span><span class="n" id="nw-cardemi">0</span></div>
+      <div><span>Credit card outstanding</span><span class="n" id="nw-cards">0</span></div>
+      <div><span>Borrowed from friends (owed by you)</span><span class="n" id="nw-borrowed">0</span></div>
+      <div style="border-top:1px solid var(--line);margin-top:6px;padding-top:8px;"><span>Total liabilities</span><span class="n" id="nw-liabilities">0</span></div>
+    </div>
+    <div class="stamp result" id="nw-result" style="margin-top:14px;">
+      <div class="tag">Net worth</div>
+      <div class="value" id="nw-networth">0</div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Forecast breakdown</h2>
+    <div class="desc">Where your salary goes next month — not your bank balance.</div>
+    <div class="breakdown">
+      <div style="font-weight:500;color:var(--ink);"><span>Salary</span><span class="n" id="b-salary">0</span></div>
+
+      <div style="font-weight:500;color:var(--ink);margin-top:14px;"><span>Going toward</span><span></span></div>
+      <div><span>− Loan EMI due</span><span class="n" id="b-emi">0</span></div>
+      <div><span>− Credit card (my spend)</span><span class="n" id="b-cards-mine">0</span></div>
+      <div style="color:var(--ink-faint);"><span>− Credit card (spent for others)</span><span class="n" id="b-cards-others">0</span></div>
+      <div><span>− Investment contribution</span><span class="n" id="b-invest">0</span></div>
+      <div><span>− Recurring expenses</span><span class="n" id="b-exp">0</span></div>
+      <div><span>− Other expenses</span><span class="n" id="b-otherexp">0</span></div>
+      <div style="border-top:1px solid var(--line);margin-top:6px;padding-top:6px;font-weight:500;color:var(--ink);"><span>Total going out</span><span class="n" id="b-totalout">0</span></div>
+
+      <div style="border-top:1.5px solid var(--ink);margin-top:12px;padding-top:8px;font-weight:500;color:var(--ink);font-size:14px;"><span>Left in hand from salary</span><span class="n" id="b-final">0</span></div>
+    </div>
+    <div class="desc" style="margin-top:10px;">"Total going out" includes the full card bill — spent for others included — since that's the real amount that has to leave the account. "Left in hand from salary" only subtracts your own share, since the "spent for others" portion isn't really your expense even though it's on your card. Your existing bank balance isn't added into either number here. Money lent to friends isn't counted here either — it's a separate asset. Active card EMIs aren't added separately — they're already inside the linked card's outstanding above.</div>
+  </section>
+
+  <section>
+    <h2>History</h2>
+    <div class="desc">One row per month. Export twice in the same month and you'll be asked whether to overwrite that month's entry or keep both as separate rows.</div>
+    <div id="historyChartWrap"></div>
+    <div id="historyDetailWrap"></div>
+    <div id="historyTableWrap"><div class="histempty">No months saved yet. Fill in your numbers and click Export to Excel.</div></div>
+  </section>
+
+  <div class="savebar"><span id="saveIndicator">Saved</span></div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+const fmt = n => Math.round(n||0).toLocaleString('en-IN');
+const fmtR = n => '₹' + fmt(n);
+let lastTotals = {};
+let isInitializing = true;
+
+let state = {
+  salary: 0, cash: 0,
+  banks: [], loans: [], cards: [], expenses: [], otherExpenses: [], investments: [], friends: [], borrowed: [], cardEmis: [],
+  history: [],
+  updatedAt: null
+};
+
+function newId(){ return 'i' + Math.random().toString(36).slice(2,9); }
+
+function emptyIfDefault(){
+  state.banks = [{id:newId(),name:'',balance:0,lastUpdated:''}];
+  state.loans = [{id:newId(),name:'',outstanding:0,emi:0,rate:0,paidTill:''}];
+  state.cards = [{id:newId(),name:'',outstanding:0,spentForOthers:0}];
+  state.expenses = [{id:newId(),name:'',amount:0}];
+  state.otherExpenses = [{id:newId(),name:'',amount:0}];
+  state.investments = [{id:newId(),name:'',monthly:0,value:0}];
+  state.friends = [{id:newId(),name:'',amount:0,date:'',repaid:false}];
+  state.borrowed = [{id:newId(),name:'',amount:0,date:'',bankId:'',repaid:false}];
+  state.cardEmis = [{id:newId(),name:'',emi:0,outstanding:0,cardId:'',endDate:'',for:'mine'}];
+  state.history = [];
+}
+
+function escapeHtml(s){
+  return (s||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+function flashSaved(msg){
+  updateSaveIndicator('saved');
+}
+
+function showModal({title, body, buttons}){
+  return new Promise(resolve=>{
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML = `<div class="modal-box">
+      <h3>${escapeHtml(title)}</h3>
+      <p>${body}</p>
+      <div class="modal-actions">
+        ${buttons.map((b,i)=>`<button class="modal-btn ${b.style||''}" data-idx="${i}">${escapeHtml(b.label)}${b.hint?`<small>${escapeHtml(b.hint)}</small>`:''}</button>`).join('')}
+      </div>
+    </div>`;
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', e=>{
+      const btn = e.target.closest('.modal-btn');
+      if(btn){
+        document.body.removeChild(overlay);
+        resolve(buttons[+btn.dataset.idx].value);
+      } else if(e.target === overlay){
+        document.body.removeChild(overlay);
+        resolve(null);
+      }
+    });
+  });
+}
+
+function confirmDeleteHistory(monthKey){
+  const entry = state.history.find(h=>h.monthKey===monthKey);
+  if(!entry) return;
+  showModal({
+    title: 'Remove this entry?',
+    body: `This will permanently remove <b>${escapeHtml(entry.month)}</b> (saved ${new Date(entry.savedAt).toLocaleDateString('en-IN')}) from your history. This can't be undone once you export again.`,
+    buttons: [
+      {label:'Remove entry', style:'danger', value:'remove'},
+      {label:'Cancel', value:'cancel'}
+    ]
+  }).then(choice=>{
+    if(choice === 'remove'){
+      state.history = state.history.filter(h=>h.monthKey!==monthKey);
+      renderHistory();
+      flashSaved('Removed — export to save this change');
+    }
+  });
+}
+
+function renderBanks(){
+  const el = document.getElementById('banksList');
+  el.className = 'entry-grid cols-3';
+  el.innerHTML = `
+    <div class="ghead">Bank name</div><div class="ghead">Balance</div><div class="ghead">Last updated</div><div class="ghead"></div>
+    ${state.banks.map(b=>`
+      <input type="text" data-field="name" data-id="${b.id}" placeholder="Bank name" value="${escapeHtml(b.name)}">
+      <input type="number" data-field="balance" data-id="${b.id}" placeholder="0" min="0" value="${b.balance||''}">
+      <input type="date" data-field="lastUpdated" data-id="${b.id}" value="${b.lastUpdated||''}">
+      <button class="rm" data-action="remove-bank" data-id="${b.id}" aria-label="Remove">×</button>
+      <div class="grow-note"><span>Actually yours: <b id="computed-bank-mine-${b.id}">0</b></span></div>
+    `).join('')}`;
+}
+
+function cardOptionsHtml(selectedId){
+  let opts = `<option value="">Not linked</option>`;
+  state.cards.forEach(c=>{
+    opts += `<option value="${c.id}" ${c.id===selectedId?'selected':''}>${escapeHtml(c.name||'Unnamed card')}</option>`;
+  });
+  return opts;
+}
+
+function bankOptionsHtml(selectedId){
+  let opts = `<option value="">Not linked</option>`;
+  state.banks.forEach(b=>{
+    opts += `<option value="${b.id}" ${b.id===selectedId?'selected':''}>${escapeHtml(b.name||'Unnamed account')}</option>`;
+  });
+  return opts;
+}
+
+function renderLoans(){
+  const el = document.getElementById('loansList');
+  el.className = 'entry-grid cols-5';
+  el.innerHTML = `
+    <div class="ghead">Loan name</div><div class="ghead">Outstanding</div><div class="ghead">Monthly EMI</div><div class="ghead">Rate (%)</div><div class="ghead">Loan ends</div><div class="ghead"></div>
+    ${state.loans.map(l=>{
+      const months = monthsToPayoff(+l.outstanding||0, +l.rate||0, +l.emi||0);
+      let note = '';
+      if(months!==null) note = `<div class="grow-note"><span>≈ <b>${months}</b> EMIs remaining (about ${Math.round(months/12*10)/10} years)</span></div>`;
+      else if(l.emi && l.outstanding) note = `<div class="grow-note amber"><span>EMI doesn't cover the interest at this rate — balance won't reduce</span></div>`;
+      return `
+      <input type="text" data-field="name" data-id="${l.id}" placeholder="e.g. Home loan" value="${escapeHtml(l.name)}">
+      <input type="number" data-field="outstanding" data-id="${l.id}" placeholder="0" min="0" value="${l.outstanding||''}">
+      <input type="number" data-field="emi" data-id="${l.id}" placeholder="0" min="0" value="${l.emi||''}">
+      <input type="number" data-field="rate" data-id="${l.id}" placeholder="0" min="0" step="0.01" value="${l.rate||''}">
+      <input type="date" data-field="paidTill" data-id="${l.id}" value="${l.paidTill||''}">
+      <button class="rm" data-action="remove-loan" data-id="${l.id}" aria-label="Remove">×</button>
+      ${note}`;
+    }).join('')}`;
+}
+
+function renderCardEmis(){
+  const el = document.getElementById('cardEmisList');
+  const today = new Date();
+  el.className = 'entry-grid cols-6';
+  el.innerHTML = `
+    <div class="ghead">EMI name</div><div class="ghead">Monthly EMI</div><div class="ghead">Remaining</div><div class="ghead">On which card</div><div class="ghead">Ends</div><div class="ghead">For</div><div class="ghead"></div>
+    ${state.cardEmis.map(e=>{
+      const emisLeft = (+e.emi>0) ? Math.ceil((+e.outstanding||0)/(+e.emi)) : null;
+      const notes = [];
+      if(emisLeft!==null) notes.push(`<span>≈ <b>${emisLeft}</b> EMI${emisLeft===1?'':'s'} left</span>`);
+      if(e.endDate){
+        const end = new Date(e.endDate);
+        const monthsLeft = (end.getFullYear()-today.getFullYear())*12 + (end.getMonth()-today.getMonth());
+        if(monthsLeft <= 2 && monthsLeft >= 0) notes.push(`<span style="color:var(--amber);">Ends in ${monthsLeft} month${monthsLeft===1?'':'s'}</span>`);
+        else if(monthsLeft < 0) notes.push(`<span>Already ended</span>`);
+      }
+      const isFriend = e.for === 'friend';
+      return `
+      <input type="text" data-field="name" data-id="${e.id}" placeholder="e.g. Phone EMI" value="${escapeHtml(e.name)}">
+      <input type="number" data-field="emi" data-id="${e.id}" placeholder="0" min="0" value="${e.emi||''}">
+      <input type="number" data-field="outstanding" data-id="${e.id}" placeholder="0" min="0" value="${e.outstanding||''}">
+      <select data-field="cardId" data-id="${e.id}">${cardOptionsHtml(e.cardId)}</select>
+      <input type="date" data-field="endDate" data-id="${e.id}" value="${e.endDate||''}">
+      <div class="toggle-pair" data-id="${e.id}">
+        <button type="button" data-action="emi-mine" class="${!isFriend?'active':''}">Mine</button>
+        <button type="button" data-action="emi-friend" class="${isFriend?'active':''}">Friend</button>
+      </div>
+      <button class="rm" data-action="remove-cardemi" data-id="${e.id}" aria-label="Remove">×</button>
+      ${notes.length ? `<div class="grow-note">${notes.join('')}</div>` : ''}
+      `;
+    }).join('')}`;
+}
+
+function renderCards(){
+  const el = document.getElementById('cardsList');
+  el.className = 'entry-grid cols-3';
+  el.innerHTML = `
+    <div class="ghead">Card name</div><div class="ghead">Outstanding</div><div class="ghead">Spent for others</div><div class="ghead"></div>
+    ${state.cards.map(c=>`
+      <input type="text" data-field="name" data-id="${c.id}" placeholder="e.g. HDFC Swiggy" value="${escapeHtml(c.name)}">
+      <input type="number" data-field="outstanding" data-id="${c.id}" placeholder="0" min="0" value="${c.outstanding||''}">
+      <input type="number" data-field="spentForOthers" data-id="${c.id}" placeholder="0" min="0" value="${c.spentForOthers||''}">
+      <button class="rm" data-action="remove-card" data-id="${c.id}" aria-label="Remove">×</button>
+      <div class="grow-note"><span>My spend: <b id="computed-actual-${c.id}">0</b></span><span>Linked EMI: <b id="computed-emi-${c.id}">0</b></span><span>Due this cycle: <b id="computed-due-${c.id}">0</b></span></div>
+    `).join('')}`;
+}
+
+function renderInvestments(){
+  const el = document.getElementById('investmentsList');
+  el.className = 'entry-grid cols-3';
+  el.innerHTML = `
+    <div class="ghead">Investment</div><div class="ghead">Monthly</div><div class="ghead">Current value</div><div class="ghead"></div>
+    ${state.investments.map(v=>`
+      <input type="text" data-field="name" data-id="${v.id}" placeholder="e.g. IBM ESPP" value="${escapeHtml(v.name)}">
+      <input type="number" data-field="monthly" data-id="${v.id}" placeholder="0" min="0" value="${v.monthly||''}">
+      <input type="number" data-field="value" data-id="${v.id}" placeholder="0" min="0" value="${v.value||''}">
+      <button class="rm" data-action="remove-investment" data-id="${v.id}" aria-label="Remove">×</button>
+    `).join('')}`;
+}
+
+function renderFriends(){
+  const el = document.getElementById('friendsList');
+  el.className = 'entry-grid cols-4';
+  el.innerHTML = `
+    <div class="ghead">Friend</div><div class="ghead">Amount lent</div><div class="ghead">Date</div><div class="ghead">Repaid</div><div class="ghead"></div>
+    ${state.friends.map(f=>`
+      <input type="text" data-field="name" data-id="${f.id}" placeholder="Name" value="${escapeHtml(f.name)}">
+      <input type="number" data-field="amount" data-id="${f.id}" placeholder="0" min="0" value="${f.amount||''}">
+      <input type="date" data-field="date" data-id="${f.id}" value="${f.date||''}">
+      <input type="checkbox" data-field="repaid" data-id="${f.id}" ${f.repaid?'checked':''} style="width:auto;justify-self:center;">
+      <button class="rm" data-action="remove-friend" data-id="${f.id}" aria-label="Remove">×</button>
+    `).join('')}`;
+}
+
+function renderBorrowed(){
+  const el = document.getElementById('borrowedList');
+  el.className = 'entry-grid cols-5';
+  el.innerHTML = `
+    <div class="ghead">Friend</div><div class="ghead">Amount</div><div class="ghead">Date</div><div class="ghead">Account</div><div class="ghead">Repaid</div><div class="ghead"></div>
+    ${state.borrowed.map(f=>`
+      <input type="text" data-field="name" data-id="${f.id}" placeholder="Name" value="${escapeHtml(f.name)}">
+      <input type="number" data-field="amount" data-id="${f.id}" placeholder="0" min="0" value="${f.amount||''}">
+      <input type="date" data-field="date" data-id="${f.id}" value="${f.date||''}">
+      <select data-field="bankId" data-id="${f.id}">${bankOptionsHtml(f.bankId)}</select>
+      <input type="checkbox" data-field="repaid" data-id="${f.id}" ${f.repaid?'checked':''} style="width:auto;justify-self:center;">
+      <button class="rm" data-action="remove-borrowed" data-id="${f.id}" aria-label="Remove">×</button>
+    `).join('')}`;
+}
+
+function refreshBorrowedBankOptions(){
+  state.borrowed.forEach(f=>{
+    const sel = document.querySelector(`#borrowedList select[data-field="bankId"][data-id="${f.id}"]`);
+    if(!sel) return;
+    if(f.bankId && !state.banks.find(b=>b.id===f.bankId)) f.bankId='';
+    sel.innerHTML = bankOptionsHtml(f.bankId);
+  });
+}
+
+function renderExpenses(){
+  const el = document.getElementById('expensesList');
+  el.innerHTML = state.expenses.map(x=>`
+    <div class="row g2" data-id="${x.id}">
+      <input type="text" data-field="name" placeholder="Expense name" value="${escapeHtml(x.name)}">
+      <input type="number" data-field="amount" placeholder="0" min="0" value="${x.amount||''}">
+      <button class="rm" data-action="remove-expense" aria-label="Remove">×</button>
+    </div>`).join('');
+}
+
+function renderOtherExpenses(){
+  const el = document.getElementById('otherExpensesList');
+  el.innerHTML = state.otherExpenses.map(x=>`
+    <div class="row g2" data-id="${x.id}">
+      <input type="text" data-field="name" placeholder="e.g. Food, Electricity" value="${escapeHtml(x.name)}">
+      <input type="number" data-field="amount" placeholder="0" min="0" value="${x.amount||''}">
+      <button class="rm" data-action="remove-otherexpense" aria-label="Remove">×</button>
+    </div>`).join('');
+}
+
+function renderHistory(){
+  const el = document.getElementById('historyTableWrap');
+  document.getElementById('historyDetailWrap').innerHTML = '';
+  if(!state.history || !state.history.length){
+    el.innerHTML = '<div class="histempty">No months saved yet. Fill in your numbers and click Export to Excel.</div>';
+    document.getElementById('historyChartWrap').innerHTML = '';
+    return;
+  }
+  const rows = [...state.history].sort((a,b)=> a.monthKey < b.monthKey ? 1 : -1);
+  el.innerHTML = `<table class="histtable">
+    <thead><tr><th>Month</th><th>Salary</th><th>Available</th><th>Due</th><th>Surplus / shortfall</th><th>Net worth</th><th>Saved</th><th></th></tr></thead>
+    <tbody>${rows.map(r=>`
+      <tr data-monthkey="${r.monthKey}">
+        <td>${escapeHtml(r.month)}</td>
+        <td>${fmt(r.salary)}</td>
+        <td>${fmt(r.available)}</td>
+        <td>${fmt(r.due)}</td>
+        <td style="color:${r.net>=0?'var(--green)':'var(--red)'}">${r.net>=0?'':'-'}${fmt(Math.abs(r.net))}</td>
+        <td>${fmt(r.netWorth)}</td>
+        <td style="font-family:var(--sans);font-size:11px;color:var(--ink-faint);">${new Date(r.savedAt).toLocaleDateString('en-IN',{day:'numeric',month:'short'})}</td>
+        <td><button class="rm" data-action="remove-history" data-monthkey="${r.monthKey}" aria-label="Remove entry" title="Remove entry">×</button></td>
+      </tr>`).join('')}</tbody>
+  </table>`;
+  el.querySelectorAll('tbody tr').forEach(tr=>{
+    tr.addEventListener('click', e=>{
+      if(e.target.closest('[data-action="remove-history"]')) return;
+      showHistoryDetail(tr.dataset.monthkey);
+    });
+  });
+  el.querySelectorAll('[data-action="remove-history"]').forEach(btn=>{
+    btn.addEventListener('click', e=>{
+      e.stopPropagation();
+      confirmDeleteHistory(btn.dataset.monthkey);
+    });
+  });
+  renderHistoryChart(rows);
+}
+
+function renderHistoryChart(rowsDesc){
+  const wrap = document.getElementById('historyChartWrap');
+  const rows = [...rowsDesc].reverse();
+  if(rows.length < 2){
+    wrap.innerHTML = '<div class="histempty">Chart appears once you have 2 or more months saved.</div>';
+    return;
+  }
+  const W = 680, H = 180, padL = 50, padR = 10, padT = 10, padB = 24;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  const series = [
+    {key:'available', color:'var(--blue)', label:'Available'},
+    {key:'due', color:'var(--amber)', label:'Due'},
+    {key:'netWorth', color:'var(--green)', label:'Net worth'}
+  ];
+  const allVals = rows.flatMap(r=>series.map(s=>+r[s.key]||0));
+  let min = Math.min(...allVals, 0), max = Math.max(...allVals, 0);
+  const pad = (max-min)*0.1 || 1000;
+  min -= pad; max += pad;
+  const xFor = i => rows.length===1 ? padL+plotW/2 : padL + (i/(rows.length-1))*plotW;
+  const yFor = v => padT + plotH - ((v-min)/(max-min))*plotH;
+
+  const zeroY = yFor(0);
+  const zeroLine = (min<0 && max>0) ? `<line x1="${padL}" y1="${zeroY}" x2="${W-padR}" y2="${zeroY}" stroke="var(--line-strong)" stroke-dasharray="3,3"/>` : '';
+
+  const paths = series.map(s=>{
+    const pts = rows.map((r,i)=>`${xFor(i)},${yFor(+r[s.key]||0)}`).join(' ');
+    const dots = rows.map((r,i)=>`<circle cx="${xFor(i)}" cy="${yFor(+r[s.key]||0)}" r="2.6" fill="${s.color}"><title>${escapeHtml(r.month)} — ${s.label}: ${fmt(+r[s.key]||0)}</title></circle>`).join('');
+    return `<polyline points="${pts}" fill="none" stroke="${s.color}" stroke-width="1.75"/>${dots}`;
+  }).join('');
+
+  const showEvery = rows.length > 8 ? 2 : 1;
+  const labels = rows.map((r,i)=> i % showEvery === 0 ? `<text x="${xFor(i)}" y="${H-6}" text-anchor="middle" class="chart-label">${escapeHtml(r.month)}</text>` : '').join('');
+
+  const legend = series.map(s=>`<span><i style="background:${s.color}"></i>${s.label}</span>`).join('');
+
+  wrap.innerHTML = `<div class="chartwrap">
+    <div class="chartlegend">${legend}</div>
+    <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;">
+      ${zeroLine}
+      ${paths}
+      ${labels}
+    </svg>
+  </div>`;
+}
+
+function detailLine(label, value, hasData){
+  if(!hasData) return '';
+  return `<div><span>${label}</span><span class="n">${fmt(value)}</span></div>`;
+}
+
+function showHistoryDetail(monthKey){
+  const r = state.history.find(h=>h.monthKey===monthKey);
+  if(!r) return;
+  const wrap = document.getElementById('historyDetailWrap');
+  const hasFullData = r.loanEmi !== undefined;
+  wrap.innerHTML = `<div class="histdetail">
+    <div class="histdetail-head">
+      <div>
+        <h3>${escapeHtml(r.month)}</h3>
+        <div style="font-size:11px;color:var(--ink-faint);margin-top:2px;">Saved ${new Date(r.savedAt).toLocaleString('en-IN',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})}</div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="backbtn" id="histDeleteBtn" style="color:var(--red);border-color:var(--red);">Remove</button>
+        <button class="backbtn" id="histExportBtn">Export</button>
+        <button class="backbtn" id="histBackBtn">← Back to history</button>
+      </div>
+    </div>
+    <div class="breakdown">
+      ${detailLine('Salary', r.salary, true)}
+      ${detailLine('Available then', r.available, true)}
+      ${hasFullData ? detailLine('Loan EMI due', r.loanEmi, true) : ''}
+      ${hasFullData ? detailLine('Credit card due this cycle (EMI-adjusted)', r.cardsDue, true) : ''}
+      ${hasFullData ? detailLine('Card EMI (informational)', r.cardEmiMonthly, true) : ''}
+      ${hasFullData ? detailLine('Investment contribution', r.investMonthly, true) : ''}
+      ${hasFullData ? detailLine('Recurring expenses', r.recurring, true) : ''}
+      ${hasFullData ? detailLine('Other expenses', r.otherExpenses, true) : ''}
+      <div style="border-top:1px solid var(--line);margin-top:6px;padding-top:6px;"><span>Total due</span><span class="n">${fmt(r.due)}</span></div>
+      <div style="font-weight:500;color:${r.net>=0?'var(--green)':'var(--red)'};"><span>Surplus / shortfall</span><span class="n">${r.net>=0?'':'-'}${fmt(Math.abs(r.net))}</span></div>
+      ${hasFullData ? `<div style="margin-top:8px;">${detailLine('Loans outstanding', r.loanOutstanding, true)}</div>` : ''}
+      ${hasFullData ? detailLine('Credit card outstanding (full)', r.cardsTotal, true) : ''}
+      ${hasFullData ? detailLine('Investment value', r.investValue, true) : ''}
+      ${hasFullData ? detailLine('Lent to friends (owed to you)', r.friendsOut, true) : ''}
+      ${hasFullData ? detailLine('Borrowed from friends (owed by you)', r.borrowedOut, true) : ''}
+      <div style="font-weight:500;color:var(--ink);border-top:1px solid var(--line);margin-top:6px;padding-top:6px;"><span>Net worth</span><span class="n">${fmt(r.netWorth)}</span></div>
+    </div>
+    ${!hasFullData ? '<div class="desc" style="margin-top:8px;">This month was saved before the detailed breakdown was added, so only the summary figures are available.</div>' : ''}
+  </div>`;
+  document.getElementById('histBackBtn').addEventListener('click', hideHistoryDetail);
+  document.getElementById('histDeleteBtn').addEventListener('click', ()=> confirmDeleteHistory(monthKey));
+  document.getElementById('histExportBtn').addEventListener('click', ()=> exportFullHtmlReport());
+  wrap.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
+function hideHistoryDetail(){
+  document.getElementById('historyDetailWrap').innerHTML = '';
+}
+
+function refreshCardEmiOptions(){
+  state.cardEmis.forEach(e=>{
+    const sel = document.querySelector(`#cardEmisList select[data-field="cardId"][data-id="${e.id}"]`);
+    if(!sel) return;
+    if(e.cardId && !state.cards.find(c=>c.id===e.cardId)) e.cardId='';
+    sel.innerHTML = cardOptionsHtml(e.cardId);
+  });
+}
+
+function monthsBetween(from, to){
+  const months = (to.getFullYear()-from.getFullYear())*12 + (to.getMonth()-from.getMonth());
+  return Math.max(0, months);
+}
+
+function monthsToPayoff(outstanding, annualRatePct, emi){
+  if(!outstanding || !emi) return null;
+  const r = (annualRatePct||0)/100/12;
+  let bal = outstanding, months = 0;
+  const cap = 1200;
+  while(bal>0.5 && months<cap){
+    const interest = bal*r;
+    const principal = emi-interest;
+    if(principal<=0) return null;
+    bal -= principal;
+    months++;
+  }
+  return months<cap ? months : null;
+}
+
+function loanRemainingInterest(outstanding, annualRatePct, emi, monthsRemaining){
+  if(!monthsRemaining || monthsRemaining<=0 || !emi || !outstanding) return 0;
+  const r = (annualRatePct||0)/100/12;
+  let bal = outstanding, totalInterest = 0;
+  for(let i=0;i<monthsRemaining && bal>0.01;i++){
+    const interest = bal*r;
+    let principal = emi-interest;
+    if(principal>bal) principal=bal;
+    if(principal<0) principal=0;
+    totalInterest += interest;
+    bal -= principal;
+  }
+  return totalInterest;
+}
+
+function recalc(){
+  const today = new Date();
+  const totalBanks = state.banks.reduce((s,b)=>s+(+b.balance||0),0);
+  const liquid = totalBanks + (+state.cash||0);
+
+  // Loans: EMI split into principal + interest (this month), plus remaining interest to payoff
+  const totalEmi = state.loans.reduce((s,l)=>s+(+l.emi||0),0);
+  const totalLoanOutstanding = state.loans.reduce((s,l)=>s+(+l.outstanding||0),0);
+  let totalLoanInterestThisMonth = 0, totalLoanRemainingInterest = 0;
+  state.loans.forEach(l=>{
+    const outstanding = +l.outstanding||0, rate = +l.rate||0, emi = +l.emi||0;
+    const monthlyInterest = Math.min(outstanding*(rate/100/12), emi);
+    totalLoanInterestThisMonth += monthlyInterest>0 ? monthlyInterest : 0;
+    let months = null;
+    if(l.paidTill){
+      months = monthsBetween(today, new Date(l.paidTill));
+    } else {
+      months = monthsToPayoff(outstanding, rate, emi);
+    }
+    if(months!==null){
+      totalLoanRemainingInterest += loanRemainingInterest(outstanding, rate, emi, months);
+    }
+  });
+  const totalLoanPrincipalThisMonth = totalEmi - totalLoanInterestThisMonth;
+
+  // Credit cards: linked EMI is already reflected in outstanding, so only the EMI installment is due this cycle for that portion.
+  // An EMI taken 'for a friend' counts toward spent-for-others, not toward your own spend.
+  const totalCards = state.cards.reduce((s,c)=>s+(+c.outstanding||0),0);
+  const totalCardEmiMonthly = state.cardEmis.reduce((s,e)=>s+(+e.emi||0),0);
+  const totalCardEmiOutstanding = state.cardEmis.reduce((s,e)=>s+(+e.outstanding||0),0);
+
+  const cardDueThisCycle = {};
+  let totalCardsDue = 0, totalCardsDueOthers = 0;
+  state.cards.forEach(c=>{
+    const linkedRemaining = state.cardEmis.filter(e=>e.cardId===c.id).reduce((s,e)=>s+(+e.outstanding||0),0);
+    const linkedMonthlyMine = state.cardEmis.filter(e=>e.cardId===c.id && e.for!=='friend').reduce((s,e)=>s+(+e.emi||0),0);
+    const linkedMonthlyFriend = state.cardEmis.filter(e=>e.cardId===c.id && e.for==='friend').reduce((s,e)=>s+(+e.emi||0),0);
+    let dueThisCycle = (+c.outstanding||0) - linkedRemaining + linkedMonthlyMine + linkedMonthlyFriend;
+    if(dueThisCycle<0) dueThisCycle=0;
+    cardDueThisCycle[c.id] = dueThisCycle;
+    totalCardsDue += dueThisCycle;
+    totalCardsDueOthers += (+c.spentForOthers||0) + linkedMonthlyFriend;
+  });
+  const totalCardsOthers = totalCardsDueOthers; // this-cycle basis, used as the receivable asset too
+  const totalCardsActual = totalCards - totalCardsOthers;
+  const totalCardsDueMine = totalCardsDue - totalCardsDueOthers;
+
+  const totalExp = state.expenses.reduce((s,x)=>s+(+x.amount||0),0);
+  const totalOtherExp = state.otherExpenses.reduce((s,x)=>s+(+x.amount||0),0);
+  const totalInvMonthly = state.investments.reduce((s,v)=>s+(+v.monthly||0),0);
+  const totalInvValue = state.investments.reduce((s,v)=>s+(+v.value||0),0);
+  const totalFriendsOut = state.friends.reduce((s,f)=>s+(f.repaid?0:(+f.amount||0)),0);
+  const totalBorrowedOut = state.borrowed.reduce((s,f)=>s+(f.repaid?0:(+f.amount||0)),0);
+  const liquidMine = liquid - totalBorrowedOut;
+
+  const due = totalEmi + totalCardsDue + totalExp + totalOtherExp + totalInvMonthly;
+  const dueMine = totalEmi + totalCardsDueMine + totalExp + totalOtherExp + totalInvMonthly;
+  const salary = +state.salary||0;
+  const net = salary - due;
+  const netMine = salary - dueMine;
+  const assets = liquid + totalInvValue + totalFriendsOut + totalCardsOthers;
+  const liabilities = totalLoanOutstanding + totalCards + totalBorrowedOut;
+  const netWorth = assets - liabilities;
+
+  state.cards.forEach(c=>{
+    const elc = document.getElementById(`computed-actual-${c.id}`);
+    if(elc) elc.textContent = fmt((+c.outstanding||0) - (+c.spentForOthers||0));
+    const linkedEmi = state.cardEmis.filter(e=>e.cardId===c.id).reduce((s,e)=>s+(+e.emi||0),0);
+    const eleEmi = document.getElementById(`computed-emi-${c.id}`);
+    if(eleEmi) eleEmi.textContent = fmt(linkedEmi);
+    const eleDue = document.getElementById(`computed-due-${c.id}`);
+    if(eleDue) eleDue.textContent = fmt(cardDueThisCycle[c.id]);
+  });
+
+  state.banks.forEach(b=>{
+    const linkedBorrowed = state.borrowed.filter(f=>f.bankId===b.id && !f.repaid).reduce((s,f)=>s+(+f.amount||0),0);
+    const ele = document.getElementById(`computed-bank-mine-${b.id}`);
+    if(ele) ele.textContent = fmt((+b.balance||0) - linkedBorrowed);
+  });
+
+  document.getElementById('t-liquid').textContent = fmtR(liquid);
+  document.getElementById('t-liquid-mine').textContent = fmtR(liquidMine);
+  document.getElementById('t-loanemi').textContent = totalLoanInterestThisMonth>0
+    ? `${fmtR(totalEmi)} (${fmtR(totalLoanPrincipalThisMonth)} principal + ${fmtR(totalLoanInterestThisMonth)} interest)`
+    : fmtR(totalEmi);
+  document.getElementById('t-loanoutstanding').textContent = totalLoanRemainingInterest>0
+    ? `${fmtR(totalLoanOutstanding)} principal + ${fmtR(totalLoanRemainingInterest)} interest remaining`
+    : fmtR(totalLoanOutstanding);
+  document.getElementById('t-cards').textContent = fmtR(totalCards);
+  document.getElementById('t-cards-others').textContent = fmtR(totalCardsOthers);
+  document.getElementById('t-cards-actual').textContent = fmtR(totalCardsActual);
+  document.getElementById('t-cards-due').textContent = fmtR(totalCardsDue);
+  document.getElementById('t-cardemi-monthly').textContent = fmtR(totalCardEmiMonthly);
+  document.getElementById('t-cardemi-outstanding').textContent = fmtR(totalCardEmiOutstanding);
+  document.getElementById('t-expenses').textContent = fmtR(totalExp);
+  document.getElementById('t-otherexp').textContent = fmtR(totalOtherExp);
+  document.getElementById('t-invmonthly').textContent = fmtR(totalInvMonthly);
+  document.getElementById('t-invvalue').textContent = fmtR(totalInvValue);
+  document.getElementById('t-friends').textContent = fmtR(totalFriendsOut);
+  document.getElementById('t-borrowed').textContent = fmtR(totalBorrowedOut);
+
+  document.getElementById('s-available').textContent = fmt(liquid);
+  document.getElementById('s-due').textContent = fmt(due);
+
+  document.getElementById('b-salary').textContent = fmt(salary);
+  document.getElementById('b-emi').textContent = fmt(totalEmi);
+  document.getElementById('b-cards-mine').textContent = fmt(totalCardsDueMine);
+  document.getElementById('b-cards-others').textContent = fmt(totalCardsDueOthers);
+  document.getElementById('b-invest').textContent = fmt(totalInvMonthly);
+  document.getElementById('b-exp').textContent = fmt(totalExp);
+  document.getElementById('b-otherexp').textContent = fmt(totalOtherExp);
+  document.getElementById('b-totalout').textContent = fmt(due);
+  const bFinalEl = document.getElementById('b-final');
+  bFinalEl.textContent = (netMine>=0?'':'-') + fmt(Math.abs(netMine));
+  bFinalEl.style.color = netMine>=0 ? 'var(--green)' : 'var(--red)';
+
+  document.getElementById('nw-liquid').textContent = fmt(liquid);
+  document.getElementById('nw-invest').textContent = fmt(totalInvValue);
+  document.getElementById('nw-friends').textContent = fmt(totalFriendsOut);
+  document.getElementById('nw-cardsothers').textContent = fmt(totalCardsOthers);
+  document.getElementById('nw-borrowed').textContent = fmt(totalBorrowedOut);
+  document.getElementById('nw-assets').textContent = fmt(assets);
+  document.getElementById('nw-loans').textContent = fmt(totalLoanOutstanding);
+  document.getElementById('nw-cardemi').textContent = fmt(totalCardEmiOutstanding);
+  document.getElementById('nw-cards').textContent = fmt(totalCards);
+  document.getElementById('nw-liabilities').textContent = fmt(liabilities);
+  document.getElementById('nw-networth').textContent = fmt(netWorth);
+  const nwResult = document.getElementById('nw-result');
+  nwResult.classList.remove('surplus','deficit');
+  nwResult.classList.add(netWorth >= 0 ? 'surplus' : 'deficit');
+
+  const resultEl = document.getElementById('s-result');
+  const tagEl = document.getElementById('s-tag');
+  const valEl = document.getElementById('s-value');
+  resultEl.classList.remove('surplus','deficit');
+  if(net >= 0){
+    resultEl.classList.add('surplus');
+    tagEl.textContent = 'Surplus';
+    valEl.textContent = fmt(net);
+  } else {
+    resultEl.classList.add('deficit');
+    tagEl.textContent = 'Shortfall';
+    valEl.textContent = fmt(Math.abs(net));
+  }
+
+  lastTotals = {
+    liquid, liquidMine, due, salary, net, netWorth,
+    loanEmi: totalEmi, loanOutstanding: totalLoanOutstanding,
+    loanInterestThisMonth: totalLoanInterestThisMonth, loanPrincipalThisMonth: totalLoanPrincipalThisMonth,
+    loanRemainingInterest: totalLoanRemainingInterest,
+    cardsTotal: totalCards, cardsOthers: totalCardsOthers, cardsActual: totalCardsActual,
+    cardsDue: totalCardsDue, cardsDueMine: totalCardsDueMine,
+    cardEmiMonthly: totalCardEmiMonthly, cardEmiOutstanding: totalCardEmiOutstanding,
+    investMonthly: totalInvMonthly, investValue: totalInvValue,
+    recurring: totalExp, otherExpenses: totalOtherExp,
+    friendsOut: totalFriendsOut, borrowedOut: totalBorrowedOut
+  };
+  if(!isInitializing) scheduleSave();
+}
+
+function renderAll(){
+  isInitializing = true;
+  document.getElementById('salaryInput').value = state.salary || '';
+  document.getElementById('cashInput').value = state.cash || '';
+  renderBanks(); renderLoans(); renderCards(); renderCardEmis(); renderExpenses(); renderOtherExpenses(); renderInvestments(); renderFriends(); renderBorrowed();
+  renderHistory();
+  recalc();
+  isInitializing = false;
+}
+
+document.getElementById('salaryInput').addEventListener('input', e=>{
+  state.salary = +e.target.value || 0;
+  recalc();
+});
+document.getElementById('cashInput').addEventListener('input', e=>{
+  state.cash = +e.target.value || 0;
+  recalc();
+});
+
+function bindListEvents(containerId, arrKey, removeAction){
+  const el = document.getElementById(containerId);
+  el.addEventListener('input', e=>{
+    const field = e.target.dataset.field;
+    if(!field) return;
+    const id = e.target.dataset.id || e.target.closest('.row, .item-card')?.dataset.id;
+    if(!id) return;
+    const item = state[arrKey].find(x=>x.id===id);
+    if(!item) return;
+    item[field] = e.target.type === 'number' ? (+e.target.value||0) : (e.target.type === 'checkbox' ? e.target.checked : e.target.value);
+    if(arrKey === 'cards' && field === 'name') refreshCardEmiOptions();
+    if(arrKey === 'banks' && field === 'name') refreshBorrowedBankOptions();
+    recalc();
+  });
+  el.addEventListener('click', e=>{
+    if(e.target.dataset.action === removeAction){
+      const id = e.target.dataset.id || e.target.closest('.row, .item-card')?.dataset.id;
+      state[arrKey] = state[arrKey].filter(x=>x.id!==id);
+      renderFns[arrKey]();
+      if(arrKey === 'cards') refreshCardEmiOptions();
+      if(arrKey === 'banks') refreshBorrowedBankOptions();
+      recalc();
+    }
+  });
+}
+
+const renderFns = { banks: renderBanks, loans: renderLoans, cards: renderCards, expenses: renderExpenses, otherExpenses: renderOtherExpenses, investments: renderInvestments, friends: renderFriends, borrowed: renderBorrowed, cardEmis: renderCardEmis };
+
+bindListEvents('banksList','banks','remove-bank');
+bindListEvents('loansList','loans','remove-loan');
+bindListEvents('cardsList','cards','remove-card');
+bindListEvents('cardEmisList','cardEmis','remove-cardemi');
+document.getElementById('cardEmisList').addEventListener('click', e=>{
+  const btn = e.target.closest('[data-action="emi-mine"], [data-action="emi-friend"]');
+  if(!btn) return;
+  const pair = btn.closest('.toggle-pair');
+  const item = state.cardEmis.find(x=>x.id===pair.dataset.id);
+  if(!item) return;
+  item.for = btn.dataset.action === 'emi-friend' ? 'friend' : 'mine';
+  renderCardEmis();
+  recalc();
+});
+bindListEvents('investmentsList','investments','remove-investment');
+bindListEvents('friendsList','friends','remove-friend');
+bindListEvents('borrowedList','borrowed','remove-borrowed');
+bindListEvents('expensesList','expenses','remove-expense');
+bindListEvents('otherExpensesList','otherExpenses','remove-otherexpense');
+
+document.getElementById('addBank').addEventListener('click', ()=>{
+  state.banks.push({id:newId(),name:'',balance:0,lastUpdated:''});
+  renderBanks(); refreshBorrowedBankOptions(); recalc();
+});
+document.getElementById('addLoan').addEventListener('click', ()=>{
+  state.loans.push({id:newId(),name:'',outstanding:0,emi:0,rate:0,paidTill:''});
+  renderLoans(); recalc();
+});
+document.getElementById('addCard').addEventListener('click', ()=>{
+  state.cards.push({id:newId(),name:'',outstanding:0,spentForOthers:0});
+  renderCards(); refreshCardEmiOptions(); recalc();
+});
+document.getElementById('addCardEmi').addEventListener('click', ()=>{
+  state.cardEmis.push({id:newId(),name:'',emi:0,outstanding:0,cardId:'',endDate:'',for:'mine'});
+  renderCardEmis(); recalc();
+});
+document.getElementById('addExpense').addEventListener('click', ()=>{
+  state.expenses.push({id:newId(),name:'',amount:0});
+  renderExpenses(); recalc();
+});
+document.getElementById('addOtherExpense').addEventListener('click', ()=>{
+  state.otherExpenses.push({id:newId(),name:'',amount:0});
+  renderOtherExpenses(); recalc();
+});
+document.getElementById('addInvestment').addEventListener('click', ()=>{
+  state.investments.push({id:newId(),name:'',monthly:0,value:0});
+  renderInvestments(); recalc();
+});
+document.getElementById('addFriend').addEventListener('click', ()=>{
+  state.friends.push({id:newId(),name:'',amount:0,date:'',repaid:false});
+  renderFriends(); recalc();
+});
+document.getElementById('addBorrowed').addEventListener('click', ()=>{
+  state.borrowed.push({id:newId(),name:'',amount:0,date:'',bankId:'',repaid:false});
+  renderBorrowed(); recalc();
+});
+
+document.getElementById('resetBtn').addEventListener('click', ()=>{
+  if(!confirm('Clear everything on screen? This does not delete any exported file you already saved to Drive.')) return;
+  state = {salary:0,cash:0,banks:[],loans:[],cards:[],expenses:[],otherExpenses:[],investments:[],friends:[],borrowed:[],cardEmis:[],history:[],updatedAt:null};
+  emptyIfDefault();
+  renderAll();
+});
+
+function monthKeyFromDate(d){
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+}
+function monthLabelFromDate(d){
+  return d.toLocaleString('en-IN',{month:'short',year:'numeric'});
+}
+
+function exportFullHtmlReport(){
+  recalc();
+  const now = new Date();
+  const cardName = id => (state.cards.find(c=>c.id===id)||{}).name || 'Not linked';
+  const bankName = id => (state.banks.find(b=>b.id===id)||{}).name || 'Not linked';
+
+  const rowsHtml = (items, cols) => items.length ? `<table><thead><tr>${cols.map(c=>`<th>${c[0]}</th>`).join('')}</tr></thead><tbody>${
+    items.map(it=>`<tr>${cols.map(c=>`<td>${c[1](it)}</td>`).join('')}</tr>`).join('')
+  }</tbody></table>` : '<p class="empty">Nothing added.</p>';
+
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Finance Report — ${now.toLocaleDateString('en-IN')}</title>
+<style>
+body{font-family:Arial,sans-serif;max-width:820px;margin:32px auto;color:#1B2A45;padding:0 16px;}
+h1{border-bottom:2px solid #1B2A45;padding-bottom:10px;}
+h2{margin-top:32px;background:#EEF0EA;padding:8px 12px;border-radius:6px;}
+table{width:100%;border-collapse:collapse;margin-top:8px;}
+th,td{text-align:left;padding:6px 10px;border-bottom:1px solid #ddd;font-size:13.5px;}
+th{color:#666;font-size:11px;text-transform:uppercase;}
+.empty{color:#999;font-size:13px;}
+.stat{display:flex;justify-content:space-between;padding:4px 0;font-size:14px;}
+.stat b{font-family:monospace;}
+</style></head><body>
+<h1>Finance report — ${now.toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'})}</h1>
+
+<h2>Summary</h2>
+<div class="stat"><span>Salary</span><b>${fmt(state.salary)}</b></div>
+<div class="stat"><span>Available now</span><b>${fmt(lastTotals.liquid)}</b></div>
+<div class="stat"><span>Actually yours (excluding borrowed)</span><b>${fmt(lastTotals.liquidMine)}</b></div>
+<div class="stat"><span>Due next month</span><b>${fmt(lastTotals.due)}</b></div>
+<div class="stat"><span>Surplus / Shortfall</span><b>${fmt(lastTotals.net)}</b></div>
+<div class="stat"><span>Net worth</span><b>${fmt(lastTotals.netWorth)}</b></div>
+
+<h2>Bank balance and cash</h2>
+${rowsHtml(state.banks, [['Bank',b=>escapeHtml(b.name)],['Balance',b=>fmt(b.balance)],['Last updated',b=>b.lastUpdated||'—']])}
+<div class="stat"><span>Cash in hand</span><b>${fmt(state.cash)}</b></div>
+
+<h2>Loans</h2>
+${rowsHtml(state.loans, [['Loan',l=>escapeHtml(l.name)],['Outstanding',l=>fmt(l.outstanding)],['Monthly EMI',l=>fmt(l.emi)],['Rate (%)',l=>l.rate||'—'],['Loan ends',l=>l.paidTill||'—']])}
+
+<h2>Credit cards</h2>
+${rowsHtml(state.cards, [['Card',c=>escapeHtml(c.name)],['Outstanding',c=>fmt(c.outstanding)],['Spent for others',c=>fmt(c.spentForOthers)],['My spend',c=>fmt((c.outstanding||0)-(c.spentForOthers||0))]])}
+
+<h2>Active EMIs on credit cards</h2>
+${rowsHtml(state.cardEmis, [['EMI',e=>escapeHtml(e.name)],['Monthly EMI',e=>fmt(e.emi)],['Remaining principal',e=>fmt(e.outstanding)],['On card',e=>escapeHtml(cardName(e.cardId))],['Ends',e=>e.endDate||'—']])}
+
+<h2>Investments</h2>
+${rowsHtml(state.investments, [['Investment',v=>escapeHtml(v.name)],['Monthly',v=>fmt(v.monthly)],['Current value',v=>fmt(v.value)]])}
+
+<h2>Money lent to friends</h2>
+${rowsHtml(state.friends, [['Friend',f=>escapeHtml(f.name)],['Amount',f=>fmt(f.amount)],['Date',f=>f.date||'—'],['Repaid',f=>f.repaid?'Yes':'No']])}
+
+<h2>Money borrowed from friends</h2>
+${rowsHtml(state.borrowed, [['Friend',f=>escapeHtml(f.name)],['Amount',f=>fmt(f.amount)],['Date',f=>f.date||'—'],['In account',f=>escapeHtml(bankName(f.bankId))],['Repaid',f=>f.repaid?'Yes':'No']])}
+
+<h2>Recurring expenses</h2>
+${rowsHtml(state.expenses, [['Expense',x=>escapeHtml(x.name)],['Amount',x=>fmt(x.amount)]])}
+
+<h2>Other expenses</h2>
+${rowsHtml(state.otherExpenses, [['Expense',x=>escapeHtml(x.name)],['Amount',x=>fmt(x.amount)]])}
+
+</body></html>`;
+
+  const blob = new Blob([html], {type:'text/html'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'Finance-Report-' + now.toISOString().slice(0,10) + '.html';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  flashSaved('Report exported');
+}
+
+const LS_KEY = 'finance-forecast-v2';
+const AUTOSAVE_DELAY_MS = 1200;
+const FILE_AUTOSAVE_DELAY_MS = 3000;
+let autoSaveTimer = null;
+let fileAutoSaveTimer = null;
+let fileHandle = null;
+let lastSavedHash = null;
+
+function stateHash(s){ return JSON.stringify(s).length + '|' + (s.updatedAt||''); }
+
+function lsSave(){
+  try{
+    state.updatedAt = new Date().toISOString();
+    localStorage.setItem(LS_KEY, JSON.stringify(state));
+    lastSavedHash = stateHash(state);
+    updateSaveIndicator('saved');
+  }catch(e){
+    updateSaveIndicator('error');
+    console.warn('localStorage save failed:', e);
+  }
+}
+
+function lsLoad(){
+  try{
+    const raw = localStorage.getItem(LS_KEY);
+    if(!raw) return null;
+    return migrateState(JSON.parse(raw));
+  }catch(e){ return null; }
+}
+
+function migrateState(d){
+  d.history = d.history||[];
+  d.cardEmis = d.cardEmis||[];
+  d.otherExpenses = d.otherExpenses||[];
+  d.borrowed = d.borrowed||[];
+  d.friends = d.friends||[];
+  d.banks = d.banks||[];
+  d.loans = d.loans||[];
+  d.cards = d.cards||[];
+  d.expenses = d.expenses||[];
+  d.investments = d.investments||[];
+  d.cardEmis.forEach(e=>{ if(!e.for) e.for='mine'; });
+  d.borrowed.forEach(f=>{ if(!f.bankId) f.bankId=''; });
+  return d;
+}
+
+function updateSaveIndicator(status){
+  const el = document.getElementById('saveIndicator');
+  if(!el) return;
+  const map = {
+    saving:{text:'Saving…',color:'var(--ink-faint)'},
+    saved:{text:'Saved',color:'var(--green)'},
+    file:{text:'Saved to file',color:'var(--green)'},
+    error:{text:'Save failed',color:'var(--red)'},
+    dirty:{text:'Unsaved changes',color:'var(--amber)'}
+  };
+  const s = map[status]||map.dirty;
+  el.textContent = s.text;
+  el.style.color = s.color;
+}
+
+function scheduleSave(){
+  updateSaveIndicator('dirty');
+  clearTimeout(autoSaveTimer);
+  autoSaveTimer = setTimeout(()=>{
+    lsSave();
+    scheduleFileSave();
+  }, AUTOSAVE_DELAY_MS);
+}
+
+function scheduleFileSave(){
+  if(!fileHandle) return;
+  clearTimeout(fileAutoSaveTimer);
+  fileAutoSaveTimer = setTimeout(()=> silentFileSave(), FILE_AUTOSAVE_DELAY_MS);
+}
+
+async function silentFileSave(){
+  if(!fileHandle) return;
+  try{
+    const wb = buildWorkbook();
+    const wbout = XLSX.write(wb,{bookType:'xlsx',type:'array'});
+    const writable = await fileHandle.createWritable();
+    await writable.write(wbout);
+    await writable.close();
+    const ts = new Date().toLocaleString('en-IN',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+    document.getElementById('updatedNote').textContent = 'Auto-saved to ' + fileHandle.name + ' — ' + ts;
+    updateSaveIndicator('file');
+  }catch(e){
+    if(e.name==='SecurityError'||e.name==='InvalidStateError') fileHandle=null;
+    console.warn('Silent file save failed:',e);
+  }
+}
+
+function buildWorkbook(){
+  const wb = XLSX.utils.book_new();
+  const cardName = id => (state.cards.find(c=>c.id===id)||{}).name||'Not linked';
+  const bankNameFn = id => (state.banks.find(b=>b.id===id)||{}).name||'Not linked';
+  const now = new Date();
+  const wsSummary = XLSX.utils.json_to_sheet([{
+    'Generated on':now.toLocaleString('en-IN'),
+    Salary:state.salary,'Cash in hand':state.cash,
+    'Available now':lastTotals.liquid,'Actually yours':lastTotals.liquidMine,
+    'Loan EMI':lastTotals.loanEmi,'Loan interest this month':lastTotals.loanInterestThisMonth,
+    'Loan principal this month':lastTotals.loanPrincipalThisMonth,
+    'Remaining interest to payoff':lastTotals.loanRemainingInterest,
+    'Card due (EMI-adjusted)':lastTotals.cardsDue,'Other expenses':lastTotals.otherExpenses,
+    'Total due':lastTotals.due,'Surplus / Shortfall':lastTotals.net,'Net worth':lastTotals.netWorth
+  }]);
+  XLSX.utils.book_append_sheet(wb,wsSummary,'Summary');
+  const wsBanks = XLSX.utils.json_to_sheet(state.banks.map(b=>{
+    const linked=state.borrowed.filter(f=>f.bankId===b.id&&!f.repaid).reduce((s,f)=>s+(+f.amount||0),0);
+    return {'Bank name':b.name,Balance:b.balance,'Last updated':b.lastUpdated||'','Actually yours':(b.balance||0)-linked};
+  }));
+  XLSX.utils.book_append_sheet(wb,wsBanks,'Banks');
+  const wsLoans = XLSX.utils.json_to_sheet(state.loans.map(l=>{
+    const o=+l.outstanding||0,r=+l.rate||0,e=+l.emi||0;
+    const interest=Math.min(o*(r/100/12),e);
+    return {'Loan name':l.name,Outstanding:l.outstanding,'Monthly EMI':l.emi,'Rate (%)':l.rate,'Loan ends':l.paidTill||'','Interest this month':Math.round(interest),'Principal this month':Math.round(e-interest)};
+  }));
+  XLSX.utils.book_append_sheet(wb,wsLoans,'Loans');
+  const wsCards = XLSX.utils.json_to_sheet(state.cards.map(c=>{
+    const rem=state.cardEmis.filter(e=>e.cardId===c.id).reduce((s,e)=>s+(+e.outstanding||0),0);
+    const mon=state.cardEmis.filter(e=>e.cardId===c.id).reduce((s,e)=>s+(+e.emi||0),0);
+    let due=(c.outstanding||0)-rem+mon; if(due<0)due=0;
+    return {'Card name':c.name,'Outstanding (full)':c.outstanding,'Spent for others':c.spentForOthers,'My spend':(c.outstanding||0)-(c.spentForOthers||0),'Due this cycle':due};
+  }));
+  XLSX.utils.book_append_sheet(wb,wsCards,'Credit cards');
+  const wsCardEmis = XLSX.utils.json_to_sheet(state.cardEmis.map(e=>({'EMI name':e.name,'Monthly EMI':e.emi,Remaining:e.outstanding,'On card':cardName(e.cardId),Ends:e.endDate||'',For:e.for==='friend'?'Friend':'Mine'})));
+  XLSX.utils.book_append_sheet(wb,wsCardEmis,'Active card EMIs');
+  const wsInv = XLSX.utils.json_to_sheet(state.investments.map(v=>({Investment:v.name,Monthly:v.monthly,'Current value':v.value})));
+  XLSX.utils.book_append_sheet(wb,wsInv,'Investments');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(state.friends.map(f=>({Friend:f.name,Amount:f.amount,Date:f.date||'',Repaid:f.repaid?'Yes':'No'}))),'Money lent to friends');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(state.borrowed.map(f=>({Friend:f.name,Amount:f.amount,Date:f.date||'','In account':bankNameFn(f.bankId),Repaid:f.repaid?'Yes':'No'}))),'Money borrowed from friends');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(state.expenses.map(x=>({Name:x.name,Amount:x.amount}))),'Recurring expenses');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(state.otherExpenses.map(x=>({Name:x.name,Amount:x.amount}))),'Other expenses');
+  const histRows=[...state.history].sort((a,b)=>a.monthKey<b.monthKey?1:-1).map(h=>({Month:h.month,Salary:h.salary,Available:h.available,Due:h.due,'Surplus/Shortfall':h.net,'Net worth':h.netWorth,'Saved at':new Date(h.savedAt).toLocaleString('en-IN')}));
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(histRows.length?histRows:[{Month:''}]),'History');
+  const json=JSON.stringify(state);
+  const CHUNK=20000;
+  const chunks=[];
+  for(let i=0;i<json.length;i+=CHUNK) chunks.push([json.slice(i,i+CHUNK)]);
+  const wsState=XLSX.utils.aoa_to_sheet([['Finance Forecast — do not edit'],['Version','2'],['Chunks',String(chunks.length)],...chunks]);
+  XLSX.utils.book_append_sheet(wb,wsState,'AppState (do not edit)');
+  return wb;
+}
+
+async function exportExcel(){
+  recalc();
+  const now=new Date();
+  const baseMonthKey=monthKeyFromDate(now);
+  const monthLabel=monthLabelFromDate(now);
+  let monthKey=baseMonthKey, label=monthLabel;
+  const exact=state.history.find(h=>h.monthKey===baseMonthKey);
+  if(exact){
+    const choice=await showModal({
+      title:'You already have '+monthLabel+' saved',
+      body:'Last saved '+new Date(exact.savedAt).toLocaleString('en-IN',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+'. What should today\'s export do?',
+      buttons:[
+        {label:'Add as a new session',hint:'Keeps the old entry and adds a second row for '+monthLabel,style:'primary',value:'add'},
+        {label:'Overwrite the existing entry',hint:'Replaces saved numbers for this month with today\'s',value:'overwrite'},
+        {label:'Cancel',value:'cancel'}
+      ]
+    });
+    if(choice==='cancel'||choice===null) return;
+    if(choice==='add'){
+      const versions=state.history.filter(h=>h.monthKey===baseMonthKey||h.monthKey.startsWith(baseMonthKey+'-v'));
+      monthKey=baseMonthKey+'-v'+(versions.length+1);
+      label=monthLabel+' (session '+(versions.length+1)+', '+now.toLocaleDateString('en-IN',{day:'numeric',month:'short'})+')';
+    }
+  }
+  const entry={
+    monthKey,month:label,
+    salary:lastTotals.salary,available:lastTotals.liquid,due:lastTotals.due,
+    net:lastTotals.net,netWorth:lastTotals.netWorth,
+    loanEmi:lastTotals.loanEmi,loanOutstanding:lastTotals.loanOutstanding,
+    loanInterestThisMonth:lastTotals.loanInterestThisMonth,loanPrincipalThisMonth:lastTotals.loanPrincipalThisMonth,
+    loanRemainingInterest:lastTotals.loanRemainingInterest,
+    cardsTotal:lastTotals.cardsTotal,cardsOthers:lastTotals.cardsOthers,cardsActual:lastTotals.cardsActual,
+    cardsDue:lastTotals.cardsDue,cardsDueMine:lastTotals.cardsDueMine,
+    cardEmiMonthly:lastTotals.cardEmiMonthly,cardEmiOutstanding:lastTotals.cardEmiOutstanding,
+    investMonthly:lastTotals.investMonthly,investValue:lastTotals.investValue,
+    recurring:lastTotals.recurring,otherExpenses:lastTotals.otherExpenses,
+    friendsOut:lastTotals.friendsOut,borrowedOut:lastTotals.borrowedOut,
+    snapshot:{
+      banks:JSON.parse(JSON.stringify(state.banks)),
+      loans:JSON.parse(JSON.stringify(state.loans)),
+      cards:JSON.parse(JSON.stringify(state.cards)),
+      cardEmis:JSON.parse(JSON.stringify(state.cardEmis)),
+      expenses:JSON.parse(JSON.stringify(state.expenses)),
+      otherExpenses:JSON.parse(JSON.stringify(state.otherExpenses)),
+      investments:JSON.parse(JSON.stringify(state.investments)),
+      friends:JSON.parse(JSON.stringify(state.friends)),
+      borrowed:JSON.parse(JSON.stringify(state.borrowed))
+    },
+    savedAt:now.toISOString()
+  };
+  const existingIdx=state.history.findIndex(h=>h.monthKey===monthKey);
+  if(existingIdx>=0) state.history[existingIdx]=entry;
+  else state.history.push(entry);
+  lsSave();
+  renderHistory();
+  const wb=buildWorkbook();
+  const wbout=XLSX.write(wb,{bookType:'xlsx',type:'array'});
+  const ts=now.toLocaleString('en-IN',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+  if(fileHandle){
+    try{
+      const w=await fileHandle.createWritable();
+      await w.write(wbout); await w.close();
+      document.getElementById('updatedNote').textContent='Saved to '+fileHandle.name+' — '+ts;
+      updateSaveIndicator('file'); return;
+    }catch(e){ fileHandle=null; }
+  }
+  if('showSaveFilePicker' in window){
+    try{
+      fileHandle=await window.showSaveFilePicker({suggestedName:'Finance-Forecast.xlsx',types:[{description:'Excel Workbook',accept:{'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':['.xlsx']}}]});
+      const w=await fileHandle.createWritable();
+      await w.write(wbout); await w.close();
+      document.getElementById('updatedNote').textContent='Saved to '+fileHandle.name+' — '+ts+'. Future changes auto-save here.';
+      updateSaveIndicator('file'); return;
+    }catch(e){ if(e.name==='AbortError') return; }
+  }
+  const blob=new Blob([wbout],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download='Finance-Forecast.xlsx';
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+  document.getElementById('updatedNote').textContent='Downloaded — '+ts;
+  updateSaveIndicator('saved');
+}
+
+function importExcel(file){
+  const reader=new FileReader();
+  reader.onload=evt=>{
+    try{
+      const data=new Uint8Array(evt.target.result);
+      const wb=XLSX.read(data,{type:'array'});
+      const sheetName=wb.SheetNames.find(n=>n.startsWith('AppState'));
+      const sheet=sheetName?wb.Sheets[sheetName]:null;
+      if(!sheet){ alert('No AppState sheet found. Make sure this .xlsx was exported from this tool.'); return; }
+      const rows=XLSX.utils.sheet_to_json(sheet,{header:1});
+      let parsed=null;
+      const chunksRow=rows.find(r=>r[0]==='Chunks');
+      if(chunksRow){
+        const numChunks=parseInt(chunksRow[1])||1;
+        const dataStartIdx=rows.findIndex(r=>r[0]==='Chunks')+1;
+        const json=rows.slice(dataStartIdx,dataStartIdx+numChunks).map(r=>r[0]||'').join('');
+        parsed=JSON.parse(json);
+      } else {
+        const jsonRow=rows.map(r=>r[0]).reverse().find(v=>typeof v==='string'&&v.trim().startsWith('{'));
+        if(!jsonRow){ alert('Could not find saved data. Try exporting fresh and importing again.'); return; }
+        parsed=JSON.parse(jsonRow);
+      }
+      state=migrateState(Object.assign({salary:0,cash:0,banks:[],loans:[],cards:[],expenses:[],otherExpenses:[],investments:[],friends:[],borrowed:[],cardEmis:[],history:[],updatedAt:null},parsed));
+      lsSave();
+      renderAll();
+      document.getElementById('updatedNote').textContent='Imported — auto-save is now active. Changes save automatically.';
+      updateSaveIndicator('saved');
+    }catch(err){
+      alert('Could not read this file.\n\nError: '+err.message);
+      console.error('Import failed:',err);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+async function init(){
+  const lsData=lsLoad();
+  if(lsData){
+    state=lsData;
+    renderAll();
+    const ts=state.updatedAt?new Date(state.updatedAt).toLocaleString('en-IN',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'';
+    document.getElementById('updatedNote').textContent='Restored from local storage'+(ts?' — last saved '+ts:'')+'. Changes auto-save here.';
+    updateSaveIndicator('saved');
+    return;
+  }
+  try{
+    if(typeof window.storage!=='undefined'){
+      const res=await window.storage.get('monthly-forecast-data',false);
+      if(res&&res.value){
+        const d=JSON.parse(res.value);
+        state=migrateState(Object.assign(state,d));
+        lsSave(); renderAll();
+        document.getElementById('updatedNote').textContent='Migrated from previous session — now auto-saving locally.';
+        updateSaveIndicator('saved'); return;
+      }
+    }
+  }catch(e){}
+  state=seedFromUploadedExcel();
+  lsSave(); renderAll();
+  document.getElementById('updatedNote').textContent='Pre-filled with your data. Changes auto-save. Click Export to Excel to link a file.';
+  updateSaveIndicator('saved');
+}
+
+init();
+</script>
+</body>
+</html>
