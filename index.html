@@ -172,8 +172,10 @@ input::placeholder{color:var(--ink-faint);}
       <div class="sub" id="updatedNote">Nothing loaded yet — import a file or start entering data</div>
     </div>
     <div class="actions">
-      <label class="iconbtn" for="importFile" style="cursor:pointer;">Import file</label>
-      <input type="file" id="importFile" accept=".xlsx" style="display:none;">
+      <label class="iconbtn" style="position:relative;overflow:hidden;cursor:pointer;">
+        Import file
+        <input type="file" id="importFile" accept=".xlsx" style="position:absolute;inset:0;opacity:0;cursor:pointer;font-size:100px;">
+      </label>
       <button class="iconbtn primary" id="exportBtn">Export to Excel</button>
       <button class="iconbtn" id="resetBtn">Clear all</button>
     </div>
